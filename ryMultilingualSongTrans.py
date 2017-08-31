@@ -50,8 +50,10 @@ from visual import *
 import speech_recognition as sr
 
 
-scene= display(title= '''Pitch detection and Lyric Transcription 
-    in Multilanguages with 3D Scenery, by Renyuan Lyu''')
+scene= display(title= '''
+    Pitch detection and Lyric Transcription 
+    in Multilanguages with 3D Scenery, 
+    by Renyuan Lyu''')
 
 scene.autoscale= False # 場景不要自動調整大小。
 
@@ -63,11 +65,11 @@ class Ry音類:
         self.樣本格式= pyaudio.paInt16
         self.樣本寬=   self.音.get_sample_size(self.樣本格式)
 
-        self.通道數= 1     # 2     # 道
-        self.取樣率= 16000 # 44100 # 點/秒
+        self.通道數= 1     # 道
+        self.取樣率= 16000 # 點/秒
 
-        self.框長=   256 # 512 #1024  # 點/框
-        self.總秒數= 16 #8 #5   #10    # 秒
+        self.框長=   256   # 點/框
+        self.總秒數= 16    # 秒
         
         self.流= self.音.open(
                     format=   self.樣本格式, 
@@ -77,11 +79,10 @@ class Ry音類:
                     input=    True, 
                     output=   True)
 
-        self.框數= int(self.取樣率 *self.總秒數 /self.框長 )
-
-        self.錄音框們=  []
-        for i in range(self.框數):
-            self.錄音框們 += [None]
+        self.框數=  int(self.取樣率 *self.總秒數 /self.框長 )
+        self.錄音框們=  [[] for i in range(self.框數)]
+        
+        
         
         self.錄音框已滿= False
         self.初能量mean= 0 
@@ -124,7 +125,7 @@ class Ry音類:
         
         #self.有音偵測線.start()
         
-        #'''
+
 
         self.基頻線.start()
         
@@ -133,7 +134,7 @@ class Ry音類:
         self.語音辨認線.start()
         
         #self.特徵線.start()
-        #'''
+ 
         
         
         
@@ -643,27 +644,36 @@ class Ry音類:
             #t += dt
             rate(1/dt)
             
-    def f6_語音辨認(self):
-        #global ry音, f6_語音辨認中
+    def f6_語音辨認(self, lang= 'ja'):
+        '''
+        可使用鍵盤 'j', 'e', 't'，來切換語言，
+        'j' == 'ja', 'japan'
+        'e' == 'en', 'english'
+        't' == 'zh-TW', "traditional Chinese"
+        '''
         
         辨=  sr.Recognizer()
         
         Z0= (0, self.地板+100+20,20)
         
-        標0= 標= label(pos=Z0, height=30) # the current result using larger font
+        標0= 標= label(pos=Z0, height=30) # 現框字型最大
         
         Z1= (0, self.地板+100+30,30)
-        標1=     label(pos=Z1, height=20)
+        標1=     label(pos=Z1, height=20) # 前1框字型
         
         Z2= (0, self.地板+100+40,40)
-        標2=     label(pos=Z2, height=15)
-
+        標2=     label(pos=Z2, height=15) # 前2框字型
+        
+        #
+        #安全措施，靜候第一個錄音迴圈已滿才開始做事。
+        #
         while self.錄音框已滿==False: time.sleep(.01)
         
         self.f6_語音辨認中= True
         
         N= self.框數
         M= N  # 從現框回推 總共取 M 框來辨識
+        
         lang= 'ja'#'zh-TW' # 預設值
 
         i前框= self.i現框-M+1 
@@ -672,16 +682,18 @@ class Ry音類:
         
         while self.f6_語音辨認中==True:
         
-               
-            #'''
             #
-            # 睡覺等待 i 現框 ==0，才醒來
+            # 檢查改變語言的按鍵，決定辨認標的的語言
+            #
+            # 每次都取 N 框去辨識，
+            # 除非按下[空白]或[Enter]鍵來提前中斷
+            # 這其實是人工取語音斷點之意思。
             #
             key= ''
-            #mm= 0 # 前框累積器
+
             while (self.i現框)%N != 0:
                 if scene.kb.keys:
-                    key= scene.kb.getkey()
+                    key= scene.kb.getkey()  # 取得鍵盤按鍵
                    
                 if key in ['\n', ' ']: # Enter 或 空白鍵
                     break      # 提前醒來，跳出睡覺迴圈
@@ -696,6 +708,12 @@ class Ry音類:
                     pass
                 
                 time.sleep(.01)
+            
+            #
+            # 決定要送交語音辨識引擎的語音片段，這裡最需小心處理
+            #
+            # x= getSpeechForAsrEngin()
+            #
             
             delta框= self.i現框 - i前框
             M= min(delta框, N-1)
